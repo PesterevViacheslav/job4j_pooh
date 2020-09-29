@@ -1,5 +1,4 @@
 package ru.job4j.jms;
-import org.json.JSONObject;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -17,11 +16,25 @@ import java.util.concurrent.ConcurrentHashMap;
  * @version 1
  */
 public class HttpServer {
-    ConcurrentHashMap<String, Message> queue = new ConcurrentHashMap<>();
     ConcurrentHashMap<String, Message> topic = new ConcurrentHashMap<>();
-    public static void main(String[] args) {
-        HttpServer server = new HttpServer();
-        try (ServerSocket serverSocket = new ServerSocket(1111)) {
+    private final BaseMQ mq;
+    private final int port;
+    /**
+     * Method HttpServer. Конструктор
+     * @param mq Тип обработчика
+     * @param port Порт
+     */
+    public HttpServer(BaseMQ mq, int port) {
+        this.mq = mq;
+        this.port = port;
+    }
+
+    /**
+     * Method run. Запуск сервера
+     * @throws IOException
+     */
+    public void run() throws IOException {
+        try (ServerSocket serverSocket = new ServerSocket(this.port)) {
             System.out.println("Server started!");
             while (true) {
                 Socket socket = serverSocket.accept();
@@ -29,32 +42,19 @@ public class HttpServer {
                      PrintWriter output = new PrintWriter(socket.getOutputStream())) {
                     String stringToParse = input.readLine();
                     System.out.println(stringToParse);
-                    if (stringToParse.contains("POST /queue")) {
-                        JSONObject json = new JSONObject(stringToParse.substring(stringToParse.indexOf('{'), stringToParse.indexOf('}') + 1));
-                        server.queue.put(json.get("queue").toString(), new Message(json.get("queue").toString(), json));
+                    if (stringToParse.contains("POST /")) {
+                        mq.send(stringToParse);
                     }
-                    if (stringToParse.contains("POST /topic")) {
-                        JSONObject json = new JSONObject(stringToParse.substring(stringToParse.indexOf('{'), stringToParse.indexOf('}') + 1));
-                        server.topic.put(json.get("topic").toString(), new Message(json.get("topic").toString(), json));
-                    }
-                    if (stringToParse.contains("GET /queue")) {
-                        String key = stringToParse.substring(stringToParse.lastIndexOf('/') + 1);
-                        if (server.queue.containsKey(key)) {
-                            output.println(server.queue.get(key).getMessage());
-                            server.queue.remove(key);
-                        }
-                    }
-                    if (stringToParse.contains("GET /topic")) {
-                        String key = stringToParse.substring(stringToParse.lastIndexOf('/') + 1);
-                        if (server.topic.containsKey(key)) {
-                            output.println(server.topic.get(key).getMessage());
-                        }
+                    if (stringToParse.contains("GET /")) {
+                        output.println(mq.receive(stringToParse));
                     }
                     output.flush();
                 }
             }
-        } catch (IOException ex) {
-            ex.printStackTrace();
         }
+    }
+    public static void main(String[] args) throws IOException {
+        HttpServer serverQ = new HttpServer(new QueueMQ(), 1111);
+        serverQ.run();
     }
 }

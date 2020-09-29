@@ -16,23 +16,12 @@ public class RunClients {
         messageQueue.put("text", "temperature +18 C");
         Thread producer1 = new Thread(new Producer(messageQueue, "POST /queue"));
         producer1.start();
-        JSONObject messageTopic = new JSONObject();
-        messageTopic.put("topic", "weather");
-        messageTopic.put("text", "temperature +18 C");
-        Thread producer2 = new Thread(new Producer(messageTopic, "POST /topic"));
-        producer2.start();
         Thread.sleep(1000);
         Thread consumer1 = new Thread(new Consumer("GET /queue/weather"));
         Thread consumer2 = new Thread(new Consumer("GET /queue/weather"));
-        Thread consumer3 = new Thread(new Consumer("GET /topic/weather"));
-        Thread consumer4 = new Thread(new Consumer("GET /topic/weather"));
         consumer1.start();
         consumer2.start();
-        consumer3.start();
-        consumer4.start();
         consumer1.join();
         consumer2.join();
-        consumer3.join();
-        consumer4.join();
     }
 }
